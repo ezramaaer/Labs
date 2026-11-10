@@ -1,6 +1,4 @@
-"""ЛР №2, вариант 5. Python 3.9+, только стандартная библиотека."""
 
-# Задаю число буферов, их размер и задержки для модели датчиков.
 import argparse
 import csv
 from pathlib import Path
@@ -14,7 +12,7 @@ FREE, WRITING, FULL, PROCESSING = range(4)
 T_GAP, T_ELEMENT, T_PROCESS = 0.010, 0.002, 0.015
 
 
-# Подготавливаю буферы, состояния и блокировки для одного опыта.
+
 def simulate(n=3, m=1, packets=60, seed=5):
     if n < 1 or m < 1 or packets < 2 or packets % 2:
         raise ValueError("n и m >= 1; packets >= 2 и чётное")
@@ -29,7 +27,7 @@ def simulate(n=3, m=1, packets=60, seed=5):
     reserved_at, full_at = [0.0] * N_BUFFERS, [0.0] * N_BUFFERS
     sensors_left = n
 
-    # Датчик ждёт разрешения семафора и занимает свободный буфер.
+
     def sensor(sid):
         nonlocal sensors_left
         rng = random.Random(seed + sid)
@@ -45,7 +43,7 @@ def simulate(n=3, m=1, packets=60, seed=5):
                 packet_ids[i] = packet_id
                 waits.append(waited)
 
-            # После записи всех пяти чисел разрешаю обработчику взять буфер.
+            
             data = [rng.randint(-100, 100) for _ in range(SIZE)]
             for k, value in enumerate(data):
                 sleep(T_ELEMENT)
@@ -59,7 +57,7 @@ def simulate(n=3, m=1, packets=60, seed=5):
             sensors_left -= 1
             changed.notify_all()
 
-    # Обработчик ищет готовые данные, начиная со следующего буфера.
+    
     def worker(wid):
         pos = wid % N_BUFFERS
         while True:
@@ -79,7 +77,6 @@ def simulate(n=3, m=1, packets=60, seed=5):
                         return
                     changed.wait()
 
-            # Нахожу минимум и максимум; каждые четыре числа складываю.
             sleep(T_PROCESS)
             pair = (min(buffers[i]), max(buffers[i]))
             with result_lock:
@@ -89,14 +86,14 @@ def simulate(n=3, m=1, packets=60, seed=5):
                     results.append(sum(buf4))
                     buf4.clear()
 
-            # Освобождаю входной буфер после передачи пары в общий результат.
+            
             with changed:
                 held_times.append(perf_counter() - reserved_at[i])
                 states[i] = FREE
             free_slots.release()  # Теперь следующий датчик может занять буфер.
             pos = (i + 1) % N_BUFFERS
 
-    # Запускаю датчики и обработчики, затем жду окончания всех потоков.
+    
     workers = [Thread(target=worker, args=(w,)) for w in range(m)]
     sensors = [Thread(target=sensor, args=(s,)) for s in range(n)]
     start = perf_counter()
@@ -106,7 +103,7 @@ def simulate(n=3, m=1, packets=60, seed=5):
         thread.join()
     elapsed = perf_counter() - start
 
-    # Проверяю, что каждый пакет обработан один раз, и считаю показатели.
+   
     ids = [pid for pid, pair in processed]
     if sorted(ids) != list(range(packets)):
         raise RuntimeError("Пакет потерян или обработан повторно")
@@ -123,7 +120,7 @@ def simulate(n=3, m=1, packets=60, seed=5):
                 results=results)
 
 
-# Сравниваю девять сочетаний числа датчиков и обработчиков.
+
 def benchmark(packets):
     rows = []
     metrics = ("seconds", "rate", "wait_ms", "occupied", "full")
@@ -147,7 +144,7 @@ def benchmark(packets):
     print("Полная таблица:", path)
 
 
-# Читаю параметры запуска и выбираю один опыт или исследование.
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("-n", type=int, default=3, help="число датчиков")
@@ -174,6 +171,6 @@ def main():
             benchmark(args.k)
 
 
-# Запускаю программу, только если файл открыт напрямую.
+
 if __name__ == "__main__":
     main()
