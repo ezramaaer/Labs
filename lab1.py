@@ -1,8 +1,7 @@
 """ЛР №1, задание 11: три способа умножения матрицы на вектор."""
 
-# Блок 1. Библиотеки и настройки
 import os
-# Настроить вычислительную библиотеку ДО импорта NumPy.
+
 for name in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS",
              "VECLIB_MAXIMUM_THREADS", "BLIS_NUM_THREADS"):
     os.environ[name] = "1"
@@ -20,7 +19,6 @@ WORKERS = (2, 4)
 REPEATS = 5
 
 
-# Блок 2. Подключение процессов к общей матрице и вектору
 def connect(matrix_memory, vector_memory, n):
     global A, x, shared_refs
     shared_refs = (matrix_memory, vector_memory)
@@ -30,12 +28,10 @@ def connect(matrix_memory, vector_memory, n):
     x.flags.writeable = False
 
 
-# Блок 3. Последовательное умножение
 def sequential(matrix, vector):
     return matrix @ vector
 
 
-# Блок 4. Работа одного процесса по строкам или столбцам
 def rows_part(bounds):
     start, end = bounds
     return A[start:end, :] @ x
@@ -46,7 +42,6 @@ def columns_part(bounds):
     return A[:, start:end] @ x[start:end]
 
 
-# Блок 5. Разделение работы и сбор результата
 def parallel(pool, n, p, mode):
     bounds = [(i * n // p, (i + 1) * n // p) for i in range(p)]
     if mode == "rows":
@@ -56,7 +51,6 @@ def parallel(pool, n, p, mode):
     return np.sum(parts, axis=0)
 
 
-# Блок 6. Прогрев, измерение и проверка результата
 def measure(function, expected):
     np.testing.assert_allclose(function(), expected, rtol=1e-10, atol=1e-10)
     times = []
@@ -70,7 +64,6 @@ def measure(function, expected):
     return median(times), error
 
 
-# Блок 7. Понятная строка сравнения и данные для CSV
 def record(results, n, mode, p, seconds, baseline, error):
     speedup = baseline / seconds
     efficiency = speedup / p
@@ -81,7 +74,6 @@ def record(results, n, mode, p, seconds, baseline, error):
           f"  {speedup:7.3f}  {efficiency * 100:7.2f}", flush=True)
 
 
-# Блок 8. Полное исследование при обычном запуске
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--quick", action="store_true",
@@ -112,7 +104,6 @@ def main():
                         lambda: parallel(pool, n, p, mode), expected)
                     record(results, n, mode, p, seconds, seq_time, error)
 
-    # Блок 9. Сохранение сравнения рядом с программой
     filename = "quick_results.csv" if args.quick else "results.csv"
     path = Path(__file__).resolve().with_name(filename)
     with path.open("w", newline="", encoding="utf-8-sig") as file:
@@ -127,7 +118,6 @@ def main():
         print("Для отчёта запустите без --quick: нужны размеры 1000-5000.")
 
 
-# Блок 10. Безопасный запуск дочерних процессов в Windows
 if __name__ == "__main__":
     mp.freeze_support()
     main()
